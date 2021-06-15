@@ -6,44 +6,18 @@
 namespace sdkeli_ls_udp {
 CSDKeliLsCommon::CSDKeliLsCommon(std::shared_ptr<CParserBase> parser, rclcpp::Node::SharedPtr node_ptr,
                                  SDKeliLsConfig config)
-    // : mDiagPublisher(NULL),
     : dExpectedFreq(15.0), /* Default frequency */
       mParser(parser),
       node_ptr_(node_ptr),
       mConfig(config),
       logger_(rclcpp::get_logger("CSDKeliLsCommon"))
-// mNodeHandler(nh),
-// mPrivNodeHandler(pnh)
 {
   /*Initialize receive buffer*/
   memset(mRecvBuffer, 0, RECV_BUFFER_SIZE);
   mDataLength = 0;
 
-  /*Set reconfigure callback*/
-  // dynamic_reconfigure::Server<sdkeli_ls_udp::SDKeliLsConfig>::CallbackType f;
-  // f = boost::bind(&sdkeli_ls_udp::CSDKeliLsCommon::UpdateConfig, this, _1, _2);
-  // mDynaReconfigServer.setCallback(f);
-
-  /*Set data publisher (used for debug)*/
-  // mPrivNodeHandler.param<bool>("publish_datagram", mPublishData, false);
-  // if(mPublishData)
-  // {
-  //     /*datagram publish is enabled*/
-  //     mDataPublisher = mNodeHandler.advertise<std_msgs::String>("datagram", 1000);
-  // }
-
   /*Set scan publisher*/
   mScanPublisher = node_ptr->create_publisher<sensor_msgs::msg::LaserScan>("scan", rclcpp::SensorDataQoS());
-
-  //   mDiagUpdater.setHardwareID("none");
-  //   mDiagPublisher = new diagnostic_updater::DiagnosedPublisher<sensor_msgs::msg::LaserScan>(
-  //       mScanPublisher, mDiagUpdater,
-  //       /* frequency should be target +- 10% */
-  //       diagnostic_updater::FrequencyStatusParam(&dExpectedFreq, &dExpectedFreq, 0.1, 10),
-  //       /*timestamp delta can be from 1.1 to 1.3x what it ideally is*/
-  //       diagnostic_updater::TimeStampStatusParam(-1, 1.3 * 1.0 / dExpectedFreq - mConfig.time_offset));
-
-  //   ROS_ASSERT(mDiagPublisher);
 }
 
 int CSDKeliLsCommon::StopScanner() {
