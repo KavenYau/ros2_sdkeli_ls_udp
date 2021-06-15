@@ -33,8 +33,7 @@ CSDKeliLsCommon::CSDKeliLsCommon(std::shared_ptr<CParserBase> parser, rclcpp::No
   // }
 
   /*Set scan publisher*/
-  // mScanPublisher = mNodeHandler.advertise<sensor_msgs::msg::LaserScan>("scan", 1000);
-  mScanPublisher = node_ptr->create_publisher<sensor_msgs::msg::LaserScan>("/scan", 10);
+  mScanPublisher = node_ptr->create_publisher<sensor_msgs::msg::LaserScan>("scan", rclcpp::SensorDataQoS());
 
   //   mDiagUpdater.setHardwareID("none");
   //   mDiagPublisher = new diagnostic_updater::DiagnosedPublisher<sensor_msgs::msg::LaserScan>(
