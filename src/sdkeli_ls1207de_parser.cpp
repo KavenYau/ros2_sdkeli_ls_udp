@@ -91,7 +91,12 @@ int CSDKeliLs1207DEParser::Parse(char *data, size_t data_length, SDKeliLsConfig 
       }
     }
 
-    unsigned short range = pSensFrame->GetSensDataOfIndex(j);
+    unsigned short range = 0;
+    if (!config.inverse) {
+      range = pSensFrame->GetSensDataOfIndex(j);
+    } else {
+      range = pSensFrame->GetSensDataOfIndex(pSensFrame->GetRangeEnd() - j);
+    }
     /*unsigned short range = 3000; */ /*For testing....*/
     //  ROS_WARN("fRangeMax=%f,fRangeMin=%f",fRangeMax,fRangeMin);
     float meter_value = range / 1000.0;
@@ -110,7 +115,12 @@ int CSDKeliLs1207DEParser::Parse(char *data, size_t data_length, SDKeliLsConfig 
   if (config.intensity && data_length == dataCount * 4) {
     msg.intensities.resize(index_max - index_min + 1);
     for (int j = index_min; j <= index_max; ++j) {
-      unsigned short intensity = pSensFrame->GetSensIntensityOfIndex(j);
+      unsigned short intensity = 0;
+      if (!config.inverse) {
+        intensity = pSensFrame->GetSensIntensityOfIndex(j);
+      } else {
+        intensity = pSensFrame->GetSensIntensityOfIndex(pSensFrame->GetRangeEnd() - j);
+      }
 
       if (intensity > 55000) {
         intensity = 600;
