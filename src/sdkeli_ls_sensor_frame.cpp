@@ -1,0 +1,152 @@
+#include <sdkeli_ls_udp/sdkeli_ls_constants.h>
+#include <sdkeli_ls_udp/sdkeli_ls_sensor_frame.h>
+
+namespace sdkeli_ls_udp {
+CSDKeliLsSensFrame::CSDKeliLsSensFrame(bool checkframe)
+    : logger_(rclcpp::get_logger("CSDKeliLsSensFrame")), checkframe_(checkframe) {
+  mSensDataLength = 0;
+  m_pSensData = NULL;
+}
+
+CSDKeliLsSensFrame::~CSDKeliLsSensFrame() {
+  if (m_pSensData != NULL) {
+    delete m_pSensData;
+  }
+}
+
+uint8_t CSDKeliLsSensFrame::GetFrameHeader() { return m_pSensData->header; }
+
+uint8_t CSDKeliLsSensFrame::GetCommandId() { return m_pSensData->cmd_id; }
+
+uint16_t CSDKeliLsSensFrame::GetRangeStart() { return m_pSensData->range_start; }
+
+uint16_t CSDKeliLsSensFrame::GetRangeEnd() { return m_pSensData->range_end; }
+
+int CSDKeliLsSensFrame::GetSensDataCount() { return m_pSensData->range_end - m_pSensData->range_start + 1; }
+
+uint16_t CSDKeliLsSensFrame::GetSensDataOfIndex(int index) {
+  if (index < 0 || index > (m_pSensData->range_end - m_pSensData->range_start)) {
+    RCLCPP_ERROR(logger_, "Fail to get of index %d.", index);
+    return 0;
+  }
+
+  return m_pSensData->sens_data[index];
+}
+
+uint16_t CSDKeliLsSensFrame::GetSensIntensityOfIndex(int index) {
+  uint16_t offsetAddr = m_pSensData->range_end - m_pSensData->range_start + 1 + index;
+
+  if (index < 0 || index > (m_pSensData->range_end - m_pSensData->range_start)) {
+    RCLCPP_ERROR(logger_, "Fail to get of index %d.", index);
+    return 0;
+  }
+
+  return m_pSensData->sens_data[offsetAddr];
+}
+
+bool CSDKeliLsSensFrame::CheckFrame(char *buff, int length, uint8_t value) {
+  int i = 0;
+  uint8_t result = 0;
+//   bool checkframe;
+
+  /* Get configure form launch script */
+//   ros::param::get("~checkframe", checkframe);
+
+  if (!checkframe_) {
+    /* Disable check frame function, default check true*/
+    return true;
+  }
+
+  if (buff == NULL || length <= 0) {
+    printf("CheckFrame: parameter failed\n");
+    return false;
+  }
+
+  for (i = 0; i < length; i++) {
+    result += (*buff++);
+  }
+
+  if (result == value) {
+    return true;
+  }
+
+  printf("CheckFrame: check failed, length = %d, result = 0x%X, value = 0x%X\n", length, result, value);
+
+  return false;
+}
+
+bool CSDKeliLsSensFrame::InitFromSensBuff(char *buff, int length) {
+  if (buff == NULL) {
+    RCLCPP_ERROR(logger_, "Invalide input buffer!");
+    return false;
+  }
+
+  char *pData = new char[length + 100];
+  if (pData == NULL) {
+    RCLCPP_ERROR(logger_, "Insufficiant memory!");
+    return NULL;
+  }
+
+  // memcpy(pData, buff, length);
+  m_pSensData = new (pData) CSDKeliLsSensFrame::SensData;
+  mSensDataLength = length;
+
+  /*System is using LOW END ENCODING, swtich the words*/
+  m_pSensData->range_start = 0;  // SWITCH_UINT16(m_pSensData->range_start);
+  m_pSensData->range_end = 810;  // SWITCH_UINT16(m_pSensData->range_end);
+
+  /*Switch sensor data*/
+  int dataCount = this->GetSensDataCount();
+  /*       if (true != CheckFrame((char*)m_pSensData->sens_data, dataCount * 2, m_pSensData->check_value))
+         {
+             ROS_ERROR("CheckFrame failed");
+             return false;
+         }*/
+
+  if (length == (m_pSensData->range_end - m_pSensData->range_start + 1) * 4) {
+    dataCount *= 2; /* with intensity data */
+  }
+
+  int index = 0;
+  uint16_t *tmp_buf;
+  tmp_buf = (uint16_t *)buff;
+  while (index < dataCount) {
+    m_pSensData->sens_data[index] = SWITCH_UINT16(tmp_buf[index]);
+    index++;
+  }
+
+  return true;
+}
+
+void CSDKeliLsSensFrame::DumpFrameHeader() {
+  if (m_pSensData == NULL || mSensDataLength == 0) {
+    return;
+  }
+
+  RCLCPP_DEBUG(logger_, "Frame Header: 0x%02X", this->GetFrameHeader());
+  RCLCPP_DEBUG(logger_, "Command   ID: 0x%02X", this->GetCommandId());
+  RCLCPP_DEBUG(logger_, "Angle  START: 0x%04X", this->GetRangeStart());
+  RCLCPP_DEBUG(logger_, "Angle    END: 0x%04X", this->GetRangeEnd());
+}
+
+void CSDKeliLsSensFrame::DumpFrameData() {
+  if (m_pSensData == NULL || mSensDataLength == 0) {
+    return;
+  }
+
+  int dataCount = this->GetSensDataCount();
+  RCLCPP_DEBUG(logger_, "Data   Count: %d", dataCount);
+
+  int idx = 1;
+  while (idx <= dataCount) {
+    printf("%u ", static_cast<unsigned int>(this->GetSensDataOfIndex(idx - 1)));
+
+    idx++;
+    if (idx % 48 == 0) {
+      printf("\n");
+    }
+  }
+  printf("\n");
+}
+
+} /*namespace sdkeli_ls_udp*/
